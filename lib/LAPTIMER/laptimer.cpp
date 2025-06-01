@@ -2,10 +2,11 @@
 
 #include "debug.h"
 
-const uint16_t rssi_filter_q = 2000;  //  0.01 - 655.36
-const uint16_t rssi_filter_r = 40;    // 0.0001 - 65.536
+const uint16_t rssi_filter_q = 2000; //  0.01 - 655.36
+const uint16_t rssi_filter_r = 40;   // 0.0001 - 65.536
 
-void LapTimer::init(Config *config, RX5808 *rx5808, Buzzer *buzzer, Led *l) {
+void LapTimer::init(Config *config, RX5808 *rx5808, Buzzer *buzzer, Led *l)
+{
     conf = config;
     rx = rx5808;
     buz = buzzer;
@@ -18,7 +19,8 @@ void LapTimer::init(Config *config, RX5808 *rx5808, Buzzer *buzzer, Led *l) {
     memset(rssi, 0, sizeof(rssi));
 }
 
-void LapTimer::start() {
+void LapTimer::start()
+{
     DEBUG("LapTimer started\n");
     raceStartTimeMs = millis();
     state = RUNNING;
@@ -26,7 +28,8 @@ void LapTimer::start() {
     led->on(500);
 }
 
-void LapTimer::stop() {
+void LapTimer::stop()
+{
     DEBUG("LapTimer stopped\n");
     state = STOPPED;
     lapCountWraparound = false;
@@ -37,60 +40,71 @@ void LapTimer::stop() {
     led->on(500);
 }
 
-int LapTimer::getLapNumber() {
+int LapTimer::getLapNumber()
+{
     return lapCount;
 }
 
-void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs) {
+void LapTimer::handleLapTimerUpdate(uint32_t currentTimeMs)
+{
     // always read RSSI
     rssi[rssiCount] = round(filter.filter(rx->readRssi(), 0));
     // DEBUG("RSSI: %u\n", rssi[rssiCount]);
 
-    switch (state) {
-        case STOPPED:
-            break;
-        case WAITING:
-            // detect hole shot
+    switch (state)
+    {
+    case STOPPED:
+        break;
+    case WAITING:
+        // detect hole shot
+        lapPeakCapture();
+        if (lapPeakCaptured())
+        {
+            state = RUNNING;
+            startLap();
+        }
+        break;
+    case RUNNING:
+        // Check if timer min has elapsed, start capturing peak
+        if ((currentTimeMs - startTimeMs) > conf->getMinLapMs())
+        {
             lapPeakCapture();
-            if (lapPeakCaptured()) {
-                state = RUNNING;
-                startLap();
-            }
-            break;
-        case RUNNING:
-            // Check if timer min has elapsed, start capturing peak
-            if ((currentTimeMs - startTimeMs) > conf->getMinLapMs()) {
-                lapPeakCapture();
-            }
+        }
 
-            if (lapPeakCaptured()) {
-                finishLap();
-                startLap();
-            }
-            break;
-        default:
-            break;
+        if (lapPeakCaptured())
+        {
+            finishLap();
+            startLap();
+        }
+        break;
+    default:
+        break;
     }
 
     rssiCount = (rssiCount + 1) % LAPTIMER_RSSI_HISTORY;
 }
 
-void LapTimer::lapPeakCapture() {
+void LapTimer::lapPeakCapture()
+{
     // Check if RSSI is on or post threshold, update RSSI peak
-    if (rssi[rssiCount] >= conf->getEnterRssi()) {
+    if (rssi[rssiCount] >= conf->getEnterRssi())
+    {
         // Check if RSSI is greater than the previous detected peak
-        if (rssi[rssiCount] > rssiPeak) {
+        if (rssi[rssiCount] > rssiPeak)
+        {
             rssiPeak = rssi[rssiCount];
             rssiPeakTimeMs = millis();
         }
     }
 }
 
-bool LapTimer::lapPeakCaptured() {
+bool LapTimer::lapPeakCaptured()
+{
     return (rssi[rssiCount] < rssiPeak) && (rssi[rssiCount] < conf->getExitRssi());
 }
 
-void LapTimer::startLap() {
+void LapTimer::startLap()
+{
     DEBUG("Lap started\n");
     startTimeMs = rssiPeakTimeMs;
     rssiPeak = 0;
@@ -99,39 +113,48 @@ void LapTimer::startLap() {
     led->on(200);
 }
 
-void LapTimer::finishLap() {
-    lapTimes[lapCount] = rssiPeakTimeMs - startTimeMs;
+void LapTimer::finishLap()
+{
+    lapTimes[lapCount % LAPTIMER_LAP_HISTORY] = rssiPeakTimeMs - startTimeMs;
     if (lapCount == 0 && lapCountWraparound == false)
     {
         lapTimes[0] = rssiPeakTimeMs - raceStartTimeMs;
     }
     else
     {
-        lapTimes[lapCount] = rssiPeakTimeMs - startTimeMs;
+        lapTimes[lapCount % LAPTIMER_LAP_HISTORY] = rssiPeakTimeMs - startTimeMs;
     }
-    DEBUG("Lap finished, lap time = %u\n", lapTimes[lapCount]);
-    if ((lapCount + 1) % LAPTIMER_LAP_HISTORY == 0) {
+    DEBUG("Lap finished, lap time = %u\n", lapTimes[lapCount % LAPTIMER_LAP_HISTORY]);
+    if ((lapCount + 1) % LAPTIMER_LAP_HISTORY == 0)
+    {
         lapCountWraparound = true;
     }
-    lapCount = (lapCount + 1) % LAPTIMER_LAP_HISTORY;
+
+    lapCount++;
     lapAvailable = true;
 }
 
-uint8_t LapTimer::getRssi() {
+uint8_t LapTimer::getRssi()
+{
     return rssi[rssiCount];
 }
 
-uint32_t LapTimer::getLapTime() {
+uint32_t LapTimer::getLapTime()
+{
     uint32_t lapTime = 0;
     lapAvailable = false;
-    if (lapCount == 0) {
+    if (lapCount == 0)
+    {
         lapTime = lapTimes[LAPTIMER_LAP_HISTORY - 1];
-    } else {
-        lapTime = lapTimes[lapCount - 1];
+    }
+    else
+    {
+        lapTime = lapTimes[(lapCount - 1) % LAPTIMER_LAP_HISTORY];
     }
     return lapTime;
 }
 
-bool LapTimer::isLapAvailable() {
+bool LapTimer::isLapAvailable()
+{
     return lapAvailable;
 }

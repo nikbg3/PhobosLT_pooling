@@ -92,6 +92,7 @@ onload = function (e) {
       timer.innerHTML = "00:00:00s";
       clearLaps();
       createRssiChart();
+      enableAudioLoop();
       configLoaded = true; // <-- Set flag here
     });
 };
@@ -337,6 +338,7 @@ function addLap(lapStr) {
     last3lapStr = (newLap + lapTimes[lapTimes.length - 2] + lapTimes[lapTimes.length - 1]).toFixed(2);
     cell4.innerHTML = last3lapStr + "s";
   }
+  window.scrollTo(0, document.body.scrollHeight); // Scroll to the bottom of the page
 
   switch (announcerSelect.options[announcerSelect.selectedIndex].value) {
     case "beep":
@@ -462,10 +464,10 @@ async function startRace() {
   await new Promise((r) => setTimeout(r, timeToSpeak1));
   // 8 words in "Starting on the tone in less than five"
   let timeToSpeak2 = 8 / wordsPerSecond * 1000;
-  queueSpeak("<p>Starting on the tone in less than five</p>");
+  queueSpeak("<p>Starting on the tone in fifteen seconds</p>");
   // Random start time between 1 and 5 seconds
   // Accounts for time taken to make previous announcement
-  let delayTime = (Math.random() * (5000 - 1000)) + timeToSpeak2;
+  let delayTime = 15000 + timeToSpeak2;
   await new Promise((r) => setTimeout(r, delayTime));
   beep(1, 1, "square"); // needed for some reason to make sure we fire the first beep
   beep(500, 880, "square");
