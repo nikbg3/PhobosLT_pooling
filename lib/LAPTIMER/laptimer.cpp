@@ -33,7 +33,7 @@ void LapTimer::stop()
     DEBUG("LapTimer stopped\n");
     state = STOPPED;
     lapCountWraparound = false;
-    lapCount = 0;
+    lapCount = -1;
     rssiCount = 0;
     memset(lapTimes, 0, sizeof(lapTimes));
     buz->beep(500);
@@ -143,7 +143,7 @@ uint32_t LapTimer::getLapTime()
 {
     uint32_t lapTime = 0;
     lapAvailable = false;
-    if (lapCount == 0)
+    if (lapCount == 0 || lapCount == -1)
     {
         lapTime = lapTimes[LAPTIMER_LAP_HISTORY - 1];
     }

@@ -34,7 +34,7 @@ class LapTimer {
     boolean lapCountWraparound;
     uint32_t raceStartTimeMs;
     uint32_t startTimeMs;
-    uint8_t lapCount;
+    int lapCount;
     uint8_t rssiCount;
     uint32_t lapTimes[LAPTIMER_LAP_HISTORY];
     uint8_t rssi[LAPTIMER_RSSI_HISTORY];

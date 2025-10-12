@@ -26,7 +26,6 @@ const freqLookup = [
 const config = document.getElementById("config");
 const race = document.getElementById("race");
 const calib = document.getElementById("calib");
-const ota = document.getElementById("ota");
 
 var enterRssi = 120,
   exitRssi = 100;
@@ -35,6 +34,7 @@ var announcerRate = 1.0;
 
 var lapNo = -1;
 var lapTimes = [];
+var waitingToStart = false;
 
 var timerInterval;
 const timer = document.getElementById("timer");
@@ -60,7 +60,6 @@ onload = function (e) {
   config.style.display = "block";
   race.style.display = "none";
   calib.style.display = "none";
-  ota.style.display = "none";
   fetch("/config")
     .then((response) => response.json())
     .then((config) => {
@@ -348,7 +347,7 @@ function addLap(lapStr) {
   const cell4 = row.insertCell(3);
   cell1.innerHTML = lapNo;
   if (lapNo == 0) {
-    cell2.innerHTML = "Hole Shot: " + lapStr + "s";
+    cell2.innerHTML = "Race start";
   } else {
     cell2.innerHTML = lapStr + "s";
   }
@@ -368,7 +367,7 @@ function addLap(lapStr) {
       break;
     case "1lap":
       if (lapNo == 0) {
-        queueSpeak(`<p>Hole Shot ${lapStr}</p>`);
+        queueSpeak(`<p>Race start</p>`);
       } else {
         const lapNoStr = pilotName + " Lap " + lapNo + ", ";
         const text = "<p>" + lapNoStr + lapStr + "</p>";
@@ -377,7 +376,7 @@ function addLap(lapStr) {
       break;
     case "2lap":
       if (lapNo == 0) {
-        queueSpeak(`<p>Hole Shot ${lapStr}<p>`);
+        queueSpeak(`<p>Race start</p>`);
       } else if (last2lapStr != "") {
         const text2 = "<p>" + pilotName + " 2 laps " + last2lapStr + "</p>";
         queueSpeak(text2);
@@ -385,7 +384,7 @@ function addLap(lapStr) {
       break;
     case "3lap":
       if (lapNo == 0) {
-        queueSpeak(`<p>Hole Shot ${lapStr}<p>`);
+        queueSpeak(`<p>Race start</p>`);
       } else if (last3lapStr != "") {
         const text3 = "<p>" + pilotName + " 3 laps " + last3lapStr + "</p>";
         queueSpeak(text3);
@@ -422,18 +421,17 @@ function startTimer() {
     let ms = millis < 10 ? "0" + millis : millis;
     timer.innerHTML = `${m}:${s}:${ms}s`;
   }, 10);
+
+  fetch("/timer/start", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => response.json())
+    .then((response) => console.log("/timer/start:" + JSON.stringify(response)));
 }
-
-fetch("/timer/start", {
-  method: "POST",
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-})
-  .then((response) => response.json())
-  .then((response) => console.log("/timer/start:" + JSON.stringify(response)));
-
 
 function queueSpeak(obj) {
   if (!audioEnabled) {
@@ -478,7 +476,7 @@ function doSpeak(obj) {
 async function startRace() {
   startRaceButton.disabled = true;
   queueSpeak("<p>Start racing when ready</p>");
-  startTimer();
+  waitingToStart = true;
   stopRaceButton.disabled = false;
 }
 
@@ -486,7 +484,7 @@ function stopRace() {
   queueSpeak('<p>Race stopped</p>');
   clearInterval(timerInterval);
   timer.innerHTML = "00:00:00s";
-
+  waitingToStart = false;
   fetch("/timer/stop", {
     method: "POST",
     headers: {
@@ -525,6 +523,11 @@ setInterval(() => {
         rssiBuffer.shift();
       }
       console.log("rssi", status.rssi, "buffer size", rssiBuffer.length);
+
+      if (waitingToStart && status.rssi > enterRssi) {
+        waitingToStart = false;
+        startTimer();
+      }
 
       // Handle lap time and lap number
       // Only add a new lap if lapNo has increased

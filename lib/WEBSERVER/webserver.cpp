@@ -384,7 +384,7 @@ Battery Voltage:\t%0.1fv";
         char buf[64];
         snprintf(
             buf, sizeof(buf),
-            "{\"rssi\":%u,\"laptime\":%u,\"lapnumber\":%u}",
+            "{\"rssi\":%u,\"laptime\":%u,\"lapnumber\":%d}",
             timer->getRssi(),
             timer->getLapTime(),
             timer->getLapNumber() // Make sure getLapNumber() exists
