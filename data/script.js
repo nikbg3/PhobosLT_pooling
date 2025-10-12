@@ -56,6 +56,61 @@ var audioEnabled = false;
 var speakObjsQueue = [];
 var configLoaded = false;
 
+// Voice command support (Web Speech API)
+// NOTE: This starts automatically on page load and has no UI toggle. Microphone permission will be requested by the browser.
+var recognition = null;
+
+function startVoiceRecognition() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    console.warn('Web Speech API not supported in this browser. Voice commands disabled.');
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = function(event) {
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        const transcript = event.results[i][0].transcript.trim().toLowerCase();
+        console.log('Voice recognized:', transcript);
+        if (transcript.includes('start') || transcript.includes('begin') || transcript.includes('go')) {
+          startRace();
+        } else if (transcript.includes('stop')) {
+          stopRace();
+        }
+      }
+    }
+  };
+
+  recognition.onerror = function(event) {
+    console.warn('Speech recognition error', event);
+    const mic = document.getElementById('micIndicator');
+    if (mic) mic.style.filter = 'grayscale(0%) drop-shadow(0 0 3px rgba(200,0,0,0.6))';
+  };
+
+  recognition.onend = function() {
+    // automatically restart recognition
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn('Failed to restart recognition', e);
+    }
+  };
+
+  try {
+    recognition.start();
+    const mic = document.getElementById('micIndicator');
+    if (mic) mic.style.filter = 'grayscale(0%) drop-shadow(0 0 3px rgba(0,200,0,0.6))';
+    if (mic) mic.title = 'Say: Start race, Stop race';
+  } catch (e) {
+    console.warn('Speech recognition start failed', e);
+  }
+}
+
 onload = function (e) {
   config.style.display = "block";
   race.style.display = "none";
@@ -91,6 +146,8 @@ onload = function (e) {
       createRssiChart();
       enableAudioLoop();
       configLoaded = true; // <-- Set flag here
+      // start voice recognition automatically (no UI toggle)
+      startVoiceRecognition();
     });
 };
 
@@ -522,7 +579,7 @@ setInterval(() => {
       if (rssiBuffer.length > 10) {
         rssiBuffer.shift();
       }
-      console.log("rssi", status.rssi, "buffer size", rssiBuffer.length);
+      console.debug("rssi", status.rssi, "buffer size", rssiBuffer.length);
 
       if (waitingToStart && status.rssi > enterRssi) {
         waitingToStart = false;

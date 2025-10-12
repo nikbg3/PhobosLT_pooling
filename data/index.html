@@ -116,6 +116,13 @@
       <button id="DisableAudioButton" onclick="disableAudioLoop()">Disable voice</button>
       <button id="GenerateAudioButton" onclick="generateAudio()">Test voice</button>
       <button id="restartEspButton" onclick="restartEsp()">Restart ESP</button>
+      <span id="micIndicator" title="Say: Start, Go, Begin, Stop" style="display:inline-block;margin-left:12px;vertical-align:middle;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 14C13.6569 14 15 12.6569 15 11V5C15 3.34315 13.6569 2 12 2C10.3431 2 9 3.34315 9 5V11C9 12.6569 10.3431 14 12 14Z" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 11C19 14.3137 16.3137 17 13 17H11C7.68629 17 5 14.3137 5 11" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 19V22" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
       <br>
       <button onclick="saveConfig()">Save Configuration</button>
     </div>
