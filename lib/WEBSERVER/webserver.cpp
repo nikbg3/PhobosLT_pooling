@@ -226,6 +226,15 @@ static bool startLittleFS()
     return true;
 }
 
+// Task used to delay and then restart the ESP
+static void restart_task(void *pvParameters)
+{
+    uint32_t delayMs = (uint32_t)(uintptr_t)pvParameters;
+    vTaskDelay(pdMS_TO_TICKS(delayMs));
+    ESP.restart();
+    vTaskDelete(NULL);
+}
+
 static void startMDNS()
 {
     if (!MDNS.begin(wifi_hostname))
@@ -317,6 +326,16 @@ Battery Voltage:\t%0.1fv";
         sendRssi = false;
         request->send(200, "application/json", "{\"status\": \"OK\"}");
         led->on(200); });
+
+    server.on("/restart", HTTP_POST, [this](AsyncWebServerRequest *request)
+              {
+        // reply OK and then schedule a short delayed restart so response is sent
+        request->send(200, "application/json", "{\"status\": \"OK\"}");
+        led->on(200);
+        // create a small task to restart after 500ms to allow response to be transmitted
+        const uint32_t delayMs = 500;
+        xTaskCreatePinnedToCore(restart_task, "restart_task", 2048, (void *)(uintptr_t)delayMs, 1, NULL, 1);
+    });
 
     server.on("/config", HTTP_GET, [this](AsyncWebServerRequest *request)
               {

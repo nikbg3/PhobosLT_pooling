@@ -40,7 +40,6 @@ var timerInterval;
 const timer = document.getElementById("timer");
 const startRaceButton = document.getElementById("startRaceButton");
 const stopRaceButton = document.getElementById("stopRaceButton");
-
 const batteryVoltageDisplay = document.getElementById("bvolt");
 
 const rssiBuffer = [];
@@ -55,8 +54,7 @@ var minRssiValue = exitRssi - 10;
 
 var audioEnabled = false;
 var speakObjsQueue = [];
-
-var configLoaded = false; 
+var configLoaded = false;
 
 onload = function (e) {
   config.style.display = "block";
@@ -129,7 +127,7 @@ function addRssiPoint() {
     } else {
       rssiCrossingSeries.append(now, -10);
     }
-  } else if(rssiChart) {
+  } else if (rssiChart) {
     rssiChart.stop();
     maxRssiValue = enterRssi + 10;
     minRssiValue = exitRssi - 10;
@@ -272,6 +270,30 @@ function populateFreqOutput() {
   freqOutput.textContent = band + chan + " " + frequency;
 }
 
+// Restart the ESP device via POST /restart
+function restartEsp() {
+  const btn = document.getElementById('restartEspButton');
+  if (!confirm('Are you sure?')) return;
+  if (btn) btn.disabled = true;
+  fetch('/restart', {
+    method: 'POST',
+    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error('Network response was not ok');
+      return response.json();
+    })
+    .then(json => {
+      console.log('/restart:', json);
+    })
+    .catch(err => {
+      console.error('Failed to restart ESP:', err);
+    })
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+}
+
 bcf.addEventListener("change", function handleChange(event) {
   populateFreqOutput();
 });
@@ -346,7 +368,7 @@ function addLap(lapStr) {
       break;
     case "1lap":
       if (lapNo == 0) {
-        queueSpeak(`<p>Hole Shot ${lapStr}<p>`);
+        queueSpeak(`<p>Hole Shot ${lapStr}</p>`);
       } else {
         const lapNoStr = pilotName + " Lap " + lapNo + ", ";
         const text = "<p>" + lapNoStr + lapStr + "</p>";
@@ -400,17 +422,18 @@ function startTimer() {
     let ms = millis < 10 ? "0" + millis : millis;
     timer.innerHTML = `${m}:${s}:${ms}s`;
   }, 10);
-
-  fetch("/timer/start", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  })
-    .then((response) => response.json())
-    .then((response) => console.log("/timer/start:" + JSON.stringify(response)));
 }
+
+fetch("/timer/start", {
+  method: "POST",
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+})
+  .then((response) => response.json())
+  .then((response) => console.log("/timer/start:" + JSON.stringify(response)));
+
 
 function queueSpeak(obj) {
   if (!audioEnabled) {
@@ -454,23 +477,7 @@ function doSpeak(obj) {
 
 async function startRace() {
   startRaceButton.disabled = true;
-  // Calculate time taken to say starting phrase
-  const baseWordsPerMinute = 150;
-  let baseWordsPerSecond = baseWordsPerMinute / 60;
-  let wordsPerSecond = baseWordsPerSecond * announcerRate;
-  // 3 words in "Arm your quad"
-  let timeToSpeak1 = 3 / wordsPerSecond * 1000;
-  queueSpeak("<p>Arm your quad</p>");
-  await new Promise((r) => setTimeout(r, timeToSpeak1));
-  // 8 words in "Starting on the tone in less than five"
-  let timeToSpeak2 = 8 / wordsPerSecond * 1000;
-  queueSpeak("<p>Starting on the tone in fifteen seconds</p>");
-  // Random start time between 1 and 5 seconds
-  // Accounts for time taken to make previous announcement
-  let delayTime = 15000 + timeToSpeak2;
-  await new Promise((r) => setTimeout(r, delayTime));
-  beep(1, 1, "square"); // needed for some reason to make sure we fire the first beep
-  beep(500, 880, "square");
+  queueSpeak("<p>Start racing when ready</p>");
   startTimer();
   stopRaceButton.disabled = false;
 }
