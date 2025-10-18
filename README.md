@@ -6,3 +6,4 @@ Slightly modified version of https://github.com/phobos-/PhobosLT
  - Race counter starts on first pass
  - Button to restart device
  - Voice to start/stop race (you need to enable chrome://flags/#unsafely-treat-insecure-origin-as-secure because of HTTP)
+ - Announce best lap

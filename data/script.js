@@ -34,6 +34,7 @@ var announcerRate = 1.0;
 
 var lapNo = -1;
 var lapTimes = [];
+var bestLapTime = Infinity;  // Track the best lap time
 var waitingToStart = false;
 
 var timerInterval;
@@ -373,10 +374,6 @@ function updateAlarmThreshold(obj, value) {
     .text(parseFloat(value).toFixed(1) + "v");
 }
 
-// function getAnnouncerVoices() {
-//   $().articulate("getVoices", "#voiceSelect", "System Default Announcer Voice");
-// }
-
 function beep(duration, frequency, type) {
   var context = new AudioContext();
   var oscillator = context.createOscillator();
@@ -407,6 +404,11 @@ function addLap(lapStr) {
     cell2.innerHTML = "Race start";
   } else {
     cell2.innerHTML = lapStr + "s";
+    // Check if this is a new best lap
+    if (newLap < bestLapTime) {
+      bestLapTime = newLap;
+      queueSpeak(`<p>Best lap ${lapStr}</p>`);
+    }
   }
   if (lapTimes.length >= 2 && lapNo != 0) {
     last2lapStr = (newLap + lapTimes[lapTimes.length - 1]).toFixed(2);
