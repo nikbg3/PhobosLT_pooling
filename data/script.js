@@ -407,7 +407,7 @@ function addLap(lapStr) {
     // Check if this is a new best lap
     if (newLap < bestLapTime) {
       bestLapTime = newLap;
-      queueSpeak(`<p>Best lap ${lapStr}</p>`);
+      // Best lap announcement will be queued after the current lap announcement
     }
   }
   if (lapTimes.length >= 2 && lapNo != 0) {
@@ -431,6 +431,10 @@ function addLap(lapStr) {
         const lapNoStr = pilotName + " Lap " + lapNo + ", ";
         const text = "<p>" + lapNoStr + lapStr + "</p>";
         queueSpeak(text);
+        // Add best lap announcement if this was a best lap
+        if (newLap === bestLapTime) {
+          queueSpeak(`<p>Best lap</p>`);
+        }
       }
       break;
     case "2lap":
