@@ -34,7 +34,10 @@ var announcerRate = 1.0;
 
 var lapNo = -1;
 var lapTimes = [];
-var bestLapTime = Infinity;  // Track the best lap time
+// Track the top 3 best lap times (lower is better)
+var bestLapTime = Infinity;
+var secondBestLapTime = Infinity;
+var thirdBestLapTime = Infinity;
 var waitingToStart = false;
 
 var timerInterval;
@@ -78,10 +81,25 @@ function startVoiceRecognition() {
       if (event.results[i].isFinal) {
         const transcript = event.results[i][0].transcript.trim().toLowerCase();
         console.log('Voice recognized:', transcript);
-        if (transcript.includes('start') || transcript.includes('begin') || transcript.includes('go')) {
+        // New voice commands:
+        // - "best time" -> announce current best lap time
+        // - "clear time" / "clear best time" -> reset best/second/third lap times
+        if (transcript.includes('best time')) {
+          // announce best time
+          speakBestTime();
+          break;
+        } else if (
+          transcript.includes('clear time') ||
+          transcript.includes('clear best')
+        ) {
+          clearBestTimes();
+          break;
+        } else if (transcript.includes('start') || transcript.includes('begin') || transcript.includes('go')) {
           startRace();
+          break;
         } else if (transcript.includes('stop')) {
           stopRace();
+          break;
         }
       }
     }
@@ -404,10 +422,20 @@ function addLap(lapStr) {
     cell2.innerHTML = "Race start";
   } else {
     cell2.innerHTML = lapStr + "s";
-    // Check if this is a new best lap
+    // Update top-3 best lap times (lower is better)
+    // Shift down when a new top time is achieved.
     if (newLap < bestLapTime) {
+      // new best: push previous bests down
+      thirdBestLapTime = secondBestLapTime;
+      secondBestLapTime = bestLapTime;
       bestLapTime = newLap;
-      // Best lap announcement will be queued after the current lap announcement
+    } else if (newLap < secondBestLapTime) {
+      // new second best (but not best)
+      thirdBestLapTime = secondBestLapTime;
+      secondBestLapTime = newLap;
+    } else if (newLap < thirdBestLapTime) {
+      // new third best
+      thirdBestLapTime = newLap;
     }
   }
   if (lapTimes.length >= 2 && lapNo != 0) {
@@ -431,9 +459,15 @@ function addLap(lapStr) {
         const lapNoStr = pilotName + " Lap " + lapNo + ", ";
         const text = "<p>" + lapNoStr + lapStr + "</p>";
         queueSpeak(text);
-        // Add best lap announcement if this was a best lap
-        if (newLap === bestLapTime) {
+        // Add best/2nd/3rd lap announcement if this was a top-3 lap
+        // Compare rounded values to avoid floating point comparison issues
+        const roundedLap = parseFloat(newLap).toFixed(2);
+        if (roundedLap === parseFloat(bestLapTime).toFixed(2)) {
           queueSpeak(`<p>Best lap</p>`);
+        } else if (roundedLap === parseFloat(secondBestLapTime).toFixed(2)) {
+          queueSpeak(`<p>Second best lap</p>`);
+        } else if (roundedLap === parseFloat(thirdBestLapTime).toFixed(2)) {
+          queueSpeak(`<p>Third best lap</p>`);
         }
       }
       break;
@@ -536,6 +570,28 @@ function doSpeak(obj) {
   $(obj).articulate("rate", announcerRate).articulate('speak');
 }
 
+// Announce the current best lap time via the existing audio queue.
+function speakBestTime() {
+  if (bestLapTime === Infinity) {
+    queueSpeak('<p>No best lap recorded yet</p>');
+  } else {
+    const bestStr = parseFloat(bestLapTime).toFixed(2);
+    const pilotName = pilotNameInput.value || '';
+    const pre = pilotName ? pilotName + ', ' : '';
+    queueSpeak(`<p>${pre}Best lap ${bestStr} seconds</p>`);
+  }
+}
+
+// Clear stored best/second/third lap times and announce the action.
+function clearBestTimes() {
+  bestLapTime = Infinity;
+  secondBestLapTime = Infinity;
+  thirdBestLapTime = Infinity;
+  if (audioEnabled) {
+    queueSpeak('<p>Best times cleared</p>');
+  }
+}
+
 async function startRace() {
   startRaceButton.disabled = true;
   queueSpeak("<p>Start racing when ready</p>");
@@ -563,6 +619,10 @@ function stopRace() {
 
   lapNo = -1;
   lapTimes = [];
+  // reset best lap tracking
+  bestLapTime = Infinity;
+  secondBestLapTime = Infinity;
+  thirdBestLapTime = Infinity;
 }
 
 function clearLaps() {
@@ -573,6 +633,10 @@ function clearLaps() {
   }
   lapNo = -1;
   lapTimes = [];
+  // reset best lap tracking
+  bestLapTime = Infinity;
+  secondBestLapTime = Infinity;
+  thirdBestLapTime = Infinity;
 }
 
 
